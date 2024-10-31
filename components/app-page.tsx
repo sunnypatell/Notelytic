@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Search, Plus, X, BarChart, Calendar, Clock, Tag, Trash2, Edit3, Save, Smile, Image as ImageIcon, Pin, Archive, Download, Upload, AlertTriangle, ZoomIn, ZoomOut, Github, Linkedin, Globe } from 'lucide-react'
+import { Moon, Sun, Search, Plus, BarChart, Calendar, Clock, Tag, Trash2, Edit3, Image as ImageIcon, Pin, Archive, Share2, Download, Upload, ZoomIn, ZoomOut, Github, Linkedin, Globe } from 'lucide-react'
+import Image from 'next/image'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -98,7 +99,7 @@ const openDB = (): Promise<IDBDatabase> => {
   })
 }
 
-const saveToIndexedDB = async (storeName: string, data: any) => {
+const saveToIndexedDB = async (storeName: string, data: unknown) => {
   if (!db) await openDB()
   return new Promise((resolve, reject) => {
     const transaction = db!.transaction(storeName, 'readwrite')
@@ -110,7 +111,7 @@ const saveToIndexedDB = async (storeName: string, data: any) => {
   })
 }
 
-const getAllFromIndexedDB = async (storeName: string): Promise<any[]> => {
+const getAllFromIndexedDB = async (storeName: string): Promise<unknown[]> => {
   if (!db) await openDB()
   return new Promise((resolve, reject) => {
     const transaction = db!.transaction(storeName, 'readonly')
@@ -141,6 +142,7 @@ export default function NotelyticsNoteDashboard() {
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [previewNote, setPreviewNote] = useState<Note | null>(null)
   const [isAddingNote, setIsAddingNote] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [sortBy, setSortBy] = useState<'updatedAt' | 'createdAt' | 'title'>('updatedAt')
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -157,8 +159,8 @@ export default function NotelyticsNoteDashboard() {
   useEffect(() => {
     const initializeData = async () => {
       await openDB()
-      const savedNotes = await getAllFromIndexedDB('notes')
-      const savedCategories = await getAllFromIndexedDB('categories')
+      const savedNotes = await getAllFromIndexedDB('notes') as Note[]
+      const savedCategories = await getAllFromIndexedDB('categories') as Category[]
 
       if (savedNotes.length > 0) {
         setNotes(savedNotes.map((note: Note) => ({
@@ -236,7 +238,7 @@ export default function NotelyticsNoteDashboard() {
 
   useEffect(() => {
     // Apply dark mode to body
-    document.body.classList.add('dark')
+    document.body.classList.toggle('dark', isDarkMode)
 
     // Apply dark mode styles to ReactQuill
     const style = document.createElement('style')
@@ -291,7 +293,7 @@ export default function NotelyticsNoteDashboard() {
     return () => {
       document.head.removeChild(style)
     }
-  }, [])
+  }, [isDarkMode])
 
   const filteredNotes = useMemo(() => {
     return notes
@@ -359,7 +361,7 @@ export default function NotelyticsNoteDashboard() {
     if (noteToToggle) {
       const pinnedNotes = notes.filter(note => note.isPinned).length
       if (!noteToToggle.isPinned && pinnedNotes >= 3) {
-        toast.error('You can only pin up to 3 notes 📌')
+        toast.error('You can only pin up to  3 notes 📌')
         return
       }
       const updatedNote = { ...noteToToggle, isPinned: !noteToToggle.isPinned }
@@ -465,8 +467,8 @@ export default function NotelyticsNoteDashboard() {
             for (const category of importedData.categories) {
               await saveToIndexedDB('categories', category)
             }
-            const updatedNotes = await getAllFromIndexedDB('notes')
-            const updatedCategories = await getAllFromIndexedDB('categories')
+            const updatedNotes = await getAllFromIndexedDB('notes') as Note[]
+            const updatedCategories = await getAllFromIndexedDB('categories') as Category[]
             setNotes(updatedNotes.map(note => ({
               ...note,
               createdAt: new Date(note.createdAt),
@@ -676,7 +678,13 @@ export default function NotelyticsNoteDashboard() {
                           )}
                         </div>
                         {note.image && (
-                          <img src={note.image} alt="Note image" className="w-full h-40 object-cover mb-4 rounded" />
+                          <Image
+                            src={note.image}
+                            alt="Note image"
+                            width={400}
+                            height={300}
+                            className="w-full h-40 object-cover mb-4 rounded"
+                          />
                         )}
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium px-2 py-1 rounded-full bg-opacity-50" style={{ backgroundColor: note.color }}>
@@ -688,8 +696,8 @@ export default function NotelyticsNoteDashboard() {
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {note.tags.map(tag => (
-                            <span key={tag} className="bg-blue-900 text-blue-300 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">
-                              {tag}
+                            <span key={tag} className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded-full">
+                              #{tag}
                             </span>
                           ))}
                         </div>
@@ -702,226 +710,146 @@ export default function NotelyticsNoteDashboard() {
           </TabsContent>
           <TabsContent value="list">
             <div className="space-y-4">
-              <AnimatePresence>
-                {filteredNotes.map((note) => (
-                  <motion.div
-                    key={note.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Card className="relative overflow-hidden cursor-pointer bg-gray-800" onClick={() => setPreviewNote(note)}>
-                      <CardContent className="p-6 flex justify-between items-center">
-                        <div className="flex-grow mr-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h2 className="text-xl font-semibold truncate">{note.title}</h2>
-                            {note.isPinned && <Pin className="h-4 w-4 text-yellow-500" />}
-                            {note.isArchived && <Archive className="h-4 w-4 text-blue-500" />}
-                          </div>
-                          <div className="mb-2 h-12 overflow-hidden">
-                            {isMarkdownMode ? (
-                              <ReactMarkdown>{note.content.substring(0, 100) + '...'}</ReactMarkdown>
-                            ) : (
-                              <div dangerouslySetInnerHTML={{ __html: note.content.substring(0, 100) + '...' }} />
-                            )}
-                          </div>
-                          {note.image && (
-                            <img src={note.image} alt="Note image" className="w-20 h-20 object-cover mt-2 rounded" />
-                          )}
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {note.tags.map(tag => (
-                              <span key={tag} className="bg-blue-900 text-blue-300 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <span className="text-sm font-medium px-2 py-1 rounded-full bg-opacity-50" style={{ backgroundColor: note.color }}>
-                            {note.category}
-                          </span>
-                          <span className="text-sm text-gray-400">
-                            {note.updatedAt.toLocaleString()}
-                          </span>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setEditingNote(note)
-                              }}
-                              className="text-blue-500 hover:text-blue-600"
-                            >
-                              <Edit3 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                deleteNote(note.id)
-                              }}
-                              className="text-red-500 hover:text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                togglePinNote(note.id)
-                              }}
-                              className={note.isPinned ? 'text-yellow-500' : 'text-gray-400'}
-                            >
-                              <Pin className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                toggleArchiveNote(note.id)
-                              }}
-                              className={note.isArchived ? 'text-blue-500' : 'text-gray-400'}
-                            >
-                              <Archive className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              {filteredNotes.map((note) => (
+                <Card key={note.id} className="bg-gray-800 cursor-pointer" onClick={() => setPreviewNote(note)}>
+                  <CardContent className="p-4 flex justify-between items-center">
+                    <div>
+                      <h2 className="text-lg font-semibold">{note.title}</h2>
+                      <p className="text-sm text-gray-400">{note.updatedAt.toLocaleString()}</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          togglePinNote(note.id)
+                        }}
+                        className={note.isPinned ? 'text-yellow-500' : 'text-gray-400'}
+                      >
+                        <Pin className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleArchiveNote(note.id)
+                        }}
+                        className={note.isArchived ? 'text-blue-500' : 'text-gray-400'}
+                      >
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingNote(note)
+                        }}
+                        className="text-blue-500 hover:text-blue-600"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </TabsContent>
         </Tabs>
 
         <Dialog open={isAddingNote} onOpenChange={setIsAddingNote}>
-          <DialogContent className="bg-gray-800 text-white overflow-y-auto max-h-[90vh]">
+          <DialogTrigger asChild>
+            <Button className="fixed bottom-8 right-8 rounded-full p-4 bg-blue-500 hover:bg-blue-600">
+              <Plus className="h-6 w-6" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-gray-800 text-white">
             <DialogHeader>
               <DialogTitle>Add New Note 📝</DialogTitle>
             </DialogHeader>
-            <Input
-              type="text"
-              placeholder="Title"
-              value={newNote.title}
-              onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
-              className="mb-4 bg-gray-700 text-white"
-            />
-            {isMarkdownMode ? (
-              <textarea
-                value={newNote.content}
-                onChange={(e) =>
-                  setNewNote({ ...newNote, content: e.target.value })
-                }
-                className="mb-4 w-full h-40 p-2 rounded bg-gray-700 text-white"
-                placeholder="Content (Markdown supported)"
+            <div className="space-y-4">
+              <Input
+                placeholder="Title"
+                value={newNote.title}
+                onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+                className="bg-gray-700 text-white"
               />
-            ) : (
               <ReactQuill
                 theme="snow"
                 value={newNote.content}
                 onChange={(content) => setNewNote({ ...newNote, content })}
                 modules={modules}
                 formats={formats}
-                className="mb-4 bg-gray-700 text-white"
+                className="bg-gray-700 text-white"
               />
-            )}
-            <Select value={newNote.category} onValueChange={(value) => setNewNote({ ...newNote, category: value })}>
-              <SelectTrigger className="bg-gray-700 text-white">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-700 text-white">
-                {categories.map((cat) => (
-                  <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="mt-4 flex items-center gap-4">
-              <Label htmlFor="new-image-upload" className="cursor-pointer">
-                <ImageIcon className="h-6 w-4 mr-2 inline-block" />
-                Upload Image
-              </Label>
-              <Input
-                id="new-image-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline">Add Emoji</Button>
-                </PopoverTrigger>
-                <PopoverContent className="bg-gray-700">
-                  <EmojiPicker
-                    onEmojiClick={(emojiObject) => {
-                      setNewNote({
-                        ...newNote,
-                        content: newNote.content + emojiObject.emoji
-                      })
-                    }}
-                    theme={"dark" as Theme}
-                  />
-                </PopoverContent>
-              </Popover>
+              <Select
+                value={newNote.category}
+                onValueChange={(value) => setNewNote({ ...newNote, category: value })}
+              >
+                <SelectTrigger className="w-full bg-gray-700 text-white">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 text-white">
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div>
+                <Label htmlFor="tags" className="text-white mb-2 block">Tags</Label>
+                <Input
+                  id="tags"
+                  placeholder="Enter tags (comma-separated)"
+                  value={newNote.tags.join(', ')}
+                  onChange={(e) => handleTagChange(e.target.value.split(','))}
+                  className="bg-gray-700 text-white"
+                />
+              </div>
+              <div>
+                <Label htmlFor="image-upload" className="text-white mb-2 block">Upload Image</Label>
+                <Input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="bg-gray-700 text-white"
+                />
+              </div>
             </div>
-            <div className="mt-4">
-              <Label htmlFor="new-tags-input">Tags (comma-separated)</Label>
-              <Input
-                id="new-tags-input"
-                value={newNote.tags.join(', ')}
-                onChange={(e) => handleTagChange(e.target.value.split(','))}
-                className="mt-2 bg-gray-700 text-white"
-                placeholder="Enter tags..."
-              />
-            </div>
-            {newNote.image && (
-              <img src={newNote.image} alt="New note image" className="w-full h-40 object-cover mt-4 rounded" />
-            )}
-            <Button onClick={addNote} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white">Add Note</Button>
+            <DialogFooter>
+              <Button onClick={addNote} className="bg-blue-500 hover:bg-blue-600 text-white">Add Note</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        <Dialog open={!!editingNote} onOpenChange={(open) => !open && setEditingNote(null)}>
-          <DialogContent className="bg-gray-800 text-white overflow-y-auto max-h-[90vh]">
+        <Dialog open={editingNote !== null} onOpenChange={() => setEditingNote(null)}>
+          <DialogContent className="bg-gray-800 text-white">
             <DialogHeader>
-              <DialogTitle>Edit Note ✏️</DialogTitle>
+              <DialogTitle>Edit Note 📝</DialogTitle>
             </DialogHeader>
             {editingNote && (
-              <>
+              <div className="space-y-4">
                 <Input
+                  placeholder="Title"
                   value={editingNote.title}
                   onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
-                  className="mb-4 bg-gray-700 text-white"
-                  placeholder="Title"
+                  className="bg-gray-700 text-white"
                 />
-                {isMarkdownMode ? (
-                  <textarea
-                    value={editingNote.content}
-                    onChange={(e) => setEditingNote({ ...editingNote, content: e.target.value })}
-                    className="mb-4 w-full h-40 p-2 rounded bg-gray-700 text-white"
-                    placeholder="Content (Markdown supported)"
-                  />
-                ) : (
-                  <ReactQuill
-                    theme="snow"
-                    value={editingNote.content}
-                    onChange={(content) => setEditingNote({ ...editingNote, content })}
-                    modules={modules}
-                    formats={formats}
-                    className="mb-4 bg-gray-700 text-white"
-                  />
-                )}
+                <ReactQuill
+                  theme="snow"
+                  value={editingNote.content}
+                  onChange={(content) => setEditingNote({ ...editingNote, content })}
+                  modules={modules}
+                  formats={formats}
+                  className="bg-gray-700 text-white"
+                />
                 <Select
                   value={editingNote.category}
                   onValueChange={(value) => setEditingNote({ ...editingNote, category: value })}
                 >
-                  <SelectTrigger className="bg-gray-700 text-white">
+                  <SelectTrigger className="w-full bg-gray-700 text-white">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent className="bg-gray-700 text-white">
@@ -930,86 +858,66 @@ export default function NotelyticsNoteDashboard() {
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="mt-4 flex items-center gap-4">
-                  <Label htmlFor="image-upload" className="cursor-pointer">
-                    <ImageIcon className="h-6 w-6 mr-2 inline-block" />
-                    Upload Image
-                  </Label>
+                <div>
+                  <Label htmlFor="edit-tags" className="text-white mb-2 block">Tags</Label>
                   <Input
-                    id="image-upload"
+                    id="edit-tags"
+                    placeholder="Enter tags (comma-separated)"
+                    value={editingNote.tags.join(', ')}
+                    onChange={(e) => handleTagChange(e.target.value.split(','), editingNote.id)}
+                    className="bg-gray-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-image-upload" className="text-white mb-2 block">Upload Image</Label>
+                  <Input
+                    id="edit-image-upload"
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
-                    className="hidden"
-                    ref={fileInputRef}
-                  />
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline">Add Emoji</Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="bg-gray-700">
-                      <EmojiPicker
-                        onEmojiClick={(emojiObject) => {
-                          setEditingNote({
-                            ...editingNote,
-                            content: editingNote.content + emojiObject.emoji
-                          })
-                        }}
-                        theme={"dark" as Theme}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="mt-4">
-                  <Label htmlFor="tags-input">Tags (comma-separated)</Label>
-                  <Input
-                    id="tags-input"
-                    value={editingNote.tags.join(', ')}
-                    onChange={(e) => handleTagChange(e.target.value.split(','), editingNote.id)}
-                    className="mt-2 bg-gray-700 text-white"
-                    placeholder="Enter tags..."
+                    className="bg-gray-700 text-white"
                   />
                 </div>
                 {editingNote.image && (
-                  <img src={editingNote.image} alt="Note image" className="w-full h-40 object-cover mt-4 rounded" />
+                  <Image
+                    src={editingNote.image}
+                    alt="Note image"
+                    width={400}
+                    height={300}
+                    className="w-full h-40 object-cover rounded"
+                  />
                 )}
-                <Button onClick={updateNote} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white">Save Changes</Button>
-              </>
+              </div>
             )}
+            <DialogFooter>
+              <Button onClick={updateNote} className="bg-blue-500 hover:bg-blue-600 text-white">Update Note</Button>
+              <Button onClick={() => deleteNote(editingNote!.id)} className="bg-red-500 hover:bg-red-600 text-white">Delete Note</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        <Dialog open={!!previewNote} onOpenChange={(open) => !open && setPreviewNote(null)}>
-          <DialogContent className="max-w-3xl bg-gray-800 text-white">
+        <Dialog open={previewNote !== null} onOpenChange={() => setPreviewNote(null)}>
+          <DialogContent className="bg-gray-800 text-white max-w-4xl">
             <DialogHeader>
               <DialogTitle>{previewNote?.title}</DialogTitle>
             </DialogHeader>
             {previewNote && (
-              <>
-                <div className="mb-4 overflow-y-auto max-h-[60vh]">
-                  {isMarkdownMode ? (
-                    <ReactMarkdown>{previewNote.content}</ReactMarkdown>
-                  ) : (
-                    <div dangerouslySetInnerHTML={{ __html: previewNote.content }} />
-                  )}
-                </div>
-                {previewNote.image && (
-                  <div className="relative">
-                    <img
-                      src={previewNote.image}
-                      alt="Note image"
-                      className={`w-full object-cover rounded transition-all duration-300 ${isZoomed ? 'h-auto max-h-[80vh]' : 'h-40'}`}
-                      onClick={() => setIsZoomed(!isZoomed)}
-                    />
-                    <Button
-                      className="absolute top-2 right-2 bg-opacity-50 hover:bg-opacity-75"
-                      onClick={() => setIsZoomed(!isZoomed)}
-                    >
-                      {isZoomed ? <ZoomOut className="h-4 w-4" /> : <ZoomIn className="h-4 w-4" />}
-                    </Button>
-                  </div>
+              <div className="space-y-4">
+                {isMarkdownMode ? (
+                  <ReactMarkdown>{previewNote.content}</ReactMarkdown>
+                ) : (
+                  <div dangerouslySetInnerHTML={{ __html: previewNote.content }} />
                 )}
-                <div className="mt-4 flex justify-between items-center">
+                {previewNote.image && (
+                  <Image
+                    src={previewNote.image}
+                    alt="Note image"
+                    width={400}
+                    height={300}
+                    className="w-full object-cover rounded"
+                  />
+                )}
+                <div className="flex justify-between items-center">
                   <span className="text-sm font-medium px-2 py-1 rounded-full bg-opacity-50" style={{ backgroundColor: previewNote.color }}>
                     {previewNote.category}
                   </span>
@@ -1017,210 +925,152 @@ export default function NotelyticsNoteDashboard() {
                     {previewNote.updatedAt.toLocaleString()}
                   </span>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2">
                   {previewNote.tags.map(tag => (
-                    <span key={tag} className="bg-blue-900 text-blue-300 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">
-                      {tag}
+                    <span key={tag} className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded-full">
+                      #{tag}
                     </span>
                   ))}
                 </div>
-              </>
+              </div>
             )}
+            <DialogFooter>
+              <Button onClick={() => setPreviewNote(null)} className="bg-gray-600 hover:bg-gray-700 text-white">Close</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="mt-4">
-              Manage Categories 🏷️
-            </Button>
+            <Button className="mr-4 bg-purple-500 hover:bg-purple-600 text-white">Manage Categories 🏷️</Button>
           </DialogTrigger>
           <DialogContent className="bg-gray-800 text-white">
             <DialogHeader>
-              <DialogTitle>Manage Categories</DialogTitle>
+              <DialogTitle>Manage Categories 🏷️</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              {categories.map((category) => (
-                <div key={category.name} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 rounded-full mr-2 bg-opacity-50" style={{ backgroundColor: category.color }}></div>
-                    <span>{category.name}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteCategory(category.name)}
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4">
-              <Input
-                type="text"
-                placeholder="New Category Name"
-                value={newCategory.name}
-                onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                className="mb-2 bg-gray-700 text-white"
-              />
-              <div className="flex items-center mb-2">
-                <Label htmlFor="category-color" className="mr-2">Color:</Label>
+              <div className="flex space-x-2">
                 <Input
-                  id="category-color"
+                  placeholder="New category name"
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                  className="bg-gray-700 text-white"
+                />
+                <Input
                   type="color"
                   value={newCategory.color}
-                  onChange={(e) => setNewCategory({...newCategory, color: e.target.value})}
-                  className="w-12 h-8 p-0 border-none"
+                  onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
+                  className="w-16 bg-gray-700 text-white"
                 />
+                <Button onClick={addCategory} className="bg-green-500 hover:bg-green-600 text-white">Add</Button>
               </div>
-              <Button onClick={addCategory} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                Add Category
-              </Button>
+              <div className="space-y-2">
+                {categories.map((category) => (
+                  <div key={category.name} className="flex justify-between items-center">
+                    <span className="text-sm font-medium px-2 py-1 rounded-full" style={{ backgroundColor: category.color }}>
+                      {category.name}
+                    </span>
+                    <Button
+                      onClick={() => deleteCategory(category.name)}
+                      className="bg-red-500 hover:bg-red-600 text-white"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           </DialogContent>
         </Dialog>
 
-        <div className="mt-8 flex justify-between items-center">
-          <div className="flex space-x-2">
-            <Button onClick={exportNotes} className="bg-green-600 hover:bg-green-700 text-white">
-              <Download className="mr-2 h-4 w-4" />
-              Export Notes
-            </Button>
-            <Label htmlFor="import-notes" className="cursor-pointer bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md flex items-center">
-              <Upload className="mr-2 h-4 w-4" />
-              Import Notes
-            </Label>
-            <Input
-              id="import-notes"
-              type="file"
-              accept=".json"
-              onChange={importNotes}
-              className="hidden"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="markdown-mode"
-              checked={isMarkdownMode}
-              onCheckedChange={setIsMarkdownMode}
-            />
-            <Label htmlFor="markdown-mode" className="text-white">Markdown Mode</Label>
-          </div>
-        </div>
-
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">All Tags 🏷️</h2>
-          <div className="flex flex-wrap gap-2">
-            {allTags.map(tag => (
-              <span key={tag} className="bg-blue-900 text-blue-300 text-sm font-medium mr-2 px-2.5 py-0.5 rounded">
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-8">
-          <Button onClick={getJoke} className="mr-4 bg-purple-600 hover:bg-purple-700 text-white">
-            Get a Joke 😄
-          </Button>
-          {joke && (
-            <Card className="mt-4 bg-gray-800 text-white">
-              <CardContent className="p-4">
-                <p>{joke}</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        <Button
-          className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full p-4 shadow-lg"
-          onClick={() => setIsAddingNote(true)}
-        >
-          <Plus className="h-6 w-6" />
+        <Button onClick={exportNotes} className="mr-4 bg-green-500 hover:bg-green-600 text-white">
+          Export Notes 📤
         </Button>
-      </div>
 
-      <footer className="mt-16 py-8 bg-gray-800">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <h3 className="text-lg font-semibold mb-2">Notelytic 📝</h3>
-              <p className="text-sm">Your personal note-taking companion</p>
-            </div>
-            <div className="mb-4 md:mb-0 text-center">
-              <p className="text-sm mb-2">© 2024 Sunny Patel - sunnypatel124555@gmail.com</p>
-              <Button variant="link" onClick={() => setShowTosDialog(true)}>
-                Terms of Service
-              </Button>
-            </div>
-            <div className="flex justify-center space-x-4">
-              <Button variant="ghost" size="icon" asChild>
-                <a href="https://github.com/sunnypatell" target="_blank" rel="noopener noreferrer">
-                  <Github className="h-5 w-5" />
-                  <span className="sr-only">GitHub</span>
-                </a>
-              </Button>
-              <Button variant="ghost" size="icon" asChild>
-                <a href="https://www.linkedin.com/in/sunny-patel-30b460204/" target="_blank" rel="noopener noreferrer">
-                  <Linkedin className="h-5 w-5" />
-                  <span className="sr-only">LinkedIn</span>
-                </a>
-              </Button>
-              <Button variant="ghost" size="icon" asChild>
-                <a href="https://www.sunnypatel.net/" target="_blank" rel="noopener noreferrer">
-                  <Globe className="h-5 w-5" />
-                  <span className="sr-only">Portfolio</span>
-                </a>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </footer>
+        <Button onClick={() => fileInputRef.current?.click()} className="mr-4 bg-yellow-500 hover:bg-yellow-600 text-white">
+          Import Notes 📥
+        </Button>
+        <Input
+          type="file"
+          ref={fileInputRef}
+          onChange={importNotes}
+          style={{ display: 'none' }}
+          accept=".json"
+        />
 
-      <Dialog open={showTosDialog} onOpenChange={setShowTosDialog}>
-        <DialogContent className="max-w-3xl bg-gray-800 text-white">
-          <DialogHeader>
-            <DialogTitle>Terms of Service ⚠️</DialogTitle>
-          </DialogHeader>
-          <div className="h-[400px] w-full rounded-md border p-4 overflow-auto">
+        <Button onClick={getJoke} className="mr-4 bg-pink-500 hover:bg-pink-600 text-white">
+          Get a Joke 😄
+        </Button>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button className="bg-gray-600 hover:bg-gray-700 text-white">Settings ⚙️</Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 bg-gray-800 text-white">
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <h4 className="font-medium leading-none">Appearance</h4>
+                <p className="text-sm text-gray-400">Customize the app&apos;s appearance.</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="dark-mode"
+                  checked={isDarkMode}
+                  onCheckedChange={setIsDarkMode}
+                />
+                <Label htmlFor="dark-mode">Dark Mode 🌙</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="markdown-mode"
+                  checked={isMarkdownMode}
+                  onCheckedChange={setIsMarkdownMode}
+                />
+                <Label htmlFor="markdown-mode">Markdown Mode 📝</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="zoom-mode"
+                  checked={isZoomed}
+                  onCheckedChange={setIsZoomed}
+                />
+                <Label htmlFor="zoom-mode">Zoom Mode 🔍</Label>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        <Dialog open={showTosDialog} onOpenChange={setShowTosDialog}>
+          <DialogContent className="bg-gray-800 text-white">
+            <DialogHeader>
+              <DialogTitle>Terms of Service</DialogTitle>
+            </DialogHeader>
             <div className="space-y-4">
-              <h2 className="text-xl font-bold">1. Acceptance of Terms</h2>
-              <p>By accessing or using Notelytic, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the service. This web application is developed from scratch and maintained in its entirety by Sunny Jayendra Patel.</p>
-
-              <h2 className="text-xl font-bold">2. Description of Service</h2>
-              <p>Notelytic is a personal note-taking web application designed and developed by Sunny Jayendra Patel. It allows users to create, edit, organize, and store notes.</p>
-
-              <h2 className="text-xl font-bold">3. User Responsibilities</h2>
-              <p>You are responsible for maintaining the confidentiality of personal notes. You agree to accept responsibility for all activities that occur under your account.</p>
-
-              <h2 className="text-xl font-bold">4. Intellectual Property</h2>
-              <p>Notelytic is the sole property of Sunny Jayendra Patel. The service, including its original content, features, and functionality, is protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws.</p>
-
-              <h2 className="text-xl font-bold">5. Prohibited Uses</h2>
-              <p>You may not use Notelytic for any illegal or unauthorized purpose.</p>
-
-              <h2 className="text-xl font-bold">6. Disclaimer</h2>
-              <p>Notelytic is provided on an "as is" and "as available" basis. The author makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties, including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
-
-              <h2 className="text-xl font-bold">7. Changes to Terms</h2>
-              <p>The author reserves the right, at his sole discretion, to modify or replace these Terms at any time. It is your responsibility to check these Terms periodically for changes.</p>
-
-              <h2 className="text-xl font-bold">8. Contact Information</h2>
-              <p>If you have any questions about these Terms, please contact Sunny Jayendra Patel at sunnypatel124555@gmail.com.</p>
-
-              <h2 className="text-xl font-bold">9. Copyright Notice</h2>
-              <p>This web project is protected by copyright. You may not copy, modify, or distribute this work without explicit permission from the author, Sunny Jayendra Patel. Any unauthorized use, reproduction, or distribution of this work may result in severe civil and criminal penalties, and will be prosecuted to the maximum extent possible under the law.</p>
+              <p>This web project is protected by copyright. You may not copy, modify, or distribute this work without explicit permission from the author.</p>
             </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setShowTosDialog(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button onClick={() => setShowTosDialog(false)} className="bg-blue-500 hover:bg-blue-600 text-white">I Agree</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      <ToastContainer position="bottom-right" theme="dark" />
+        <footer className="mt-16 text-center text-gray-400">
+          <p>© 2024 Notelytic. All rights reserved.</p>
+          <div className="flex justify-center space-x-4 mt-4">
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">
+              <Github className="h-6 w-6" />
+            </a>
+            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">
+              <Linkedin className="h-6 w-6" />
+            </a>
+            <a href="https://example.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">
+              <Globe className="h-6 w-6" />
+            </a>
+          </div>
+        </footer>
+
+        <ToastContainer position="bottom-right" theme={isDarkMode ? "dark" : "light"} />
+      </div>
     </div>
   )
 }
