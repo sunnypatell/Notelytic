@@ -134,6 +134,10 @@ const deleteFromIndexedDB = async (storeName: string, key: string) => {
   })
 }
 
+function isNote(item: Note | Category): item is Note {
+  return 'createdAt' in item && 'updatedAt' in item;
+}
+
 export default function NotelyticsNoteDashboard() {
   const [notes, setNotes] = useState<Note[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -161,11 +165,11 @@ export default function NotelyticsNoteDashboard() {
       const savedCategories = await getAllFromIndexedDB('categories')
 
       if (savedNotes.length > 0) {
-        setNotes(savedNotes.map((note) => ({
+        setNotes(savedNotes.filter(isNote).map((note) => ({
           ...note,
           createdAt: new Date(note.createdAt),
           updatedAt: new Date(note.updatedAt)
-        })) as Note[])
+        })))
       } else {
         // If no saved notes, create welcome notes
         const welcomeNotes: Note[] = [
@@ -475,7 +479,7 @@ export default function NotelyticsNoteDashboard() {
     toast.success('Notes and categories exported successfully! 📤')
   }, [])
 
-  const importNotes = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const importNotes = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       const reader = new FileReader()
@@ -495,11 +499,11 @@ export default function NotelyticsNoteDashboard() {
             }
             const updatedNotes = await getAllFromIndexedDB('notes')
             const updatedCategories = await getAllFromIndexedDB('categories')
-            setNotes(updatedNotes.map(note => ({
+            setNotes(updatedNotes.filter(isNote).map(note => ({
               ...note,
               createdAt: new Date(note.createdAt),
               updatedAt: new Date(note.updatedAt)
-            })) as Note[])
+            })))
             setCategories(updatedCategories as Category[])
             toast.success('Notes and categories imported successfully! 📥')
           } else {
@@ -776,8 +780,8 @@ export default function NotelyticsNoteDashboard() {
                               <span key={tag} className="bg-blue-900 text-blue-300 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">
                                 {tag}
                               </span>
-                            ))}
-                          </div>
+                          ))}
+                        </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <span className="text-sm font-medium px-2 py-1 rounded-full bg-opacity-50" style={{ backgroundColor: note.color }}>
