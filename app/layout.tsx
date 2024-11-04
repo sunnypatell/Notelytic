@@ -17,7 +17,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Notelytic",
+  title: "Notelytic 📝",
   description: "Your personal note-taking companion",
 };
 
