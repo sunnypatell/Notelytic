@@ -50,7 +50,7 @@ const initialCategories: Category[] = [
   { name: 'To-Do ✅', color: '#FF33F5' },
 ]
 
-const MotionCard = motion(Card)
+const MotionCard = motion.create(Card)
 
 const modules = {
   toolbar: [
