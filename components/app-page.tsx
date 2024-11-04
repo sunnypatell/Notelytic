@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Search, Plus, X, BarChart, Calendar, Clock, Tag, Trash2, Edit3, Save, Smile, Image as ImageIcon, Pin, Archive, Download, Upload, AlertTriangle, ZoomIn, ZoomOut, Github, Linkedin, Globe } from 'lucide-react'
+import { Moon, Search, Plus, BarChart, Calendar, Clock, Tag, Trash2, Edit3, Pin, Archive, Download, Upload, ZoomIn, ZoomOut, Github, Linkedin, Globe } from 'lucide-react'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -98,7 +98,7 @@ const openDB = (): Promise<IDBDatabase> => {
   })
 }
 
-const saveToIndexedDB = async (storeName: string, data: any) => {
+const saveToIndexedDB = async (storeName: string, data: Note | Category) => {
   if (!db) await openDB()
   return new Promise((resolve, reject) => {
     const transaction = db!.transaction(storeName, 'readwrite')
@@ -110,7 +110,7 @@ const saveToIndexedDB = async (storeName: string, data: any) => {
   })
 }
 
-const getAllFromIndexedDB = async (storeName: string): Promise<any[]> => {
+const getAllFromIndexedDB = async (storeName: string): Promise<(Note | Category)[]> => {
   if (!db) await openDB()
   return new Promise((resolve, reject) => {
     const transaction = db!.transaction(storeName, 'readonly')
@@ -161,11 +161,11 @@ export default function NotelyticsNoteDashboard() {
       const savedCategories = await getAllFromIndexedDB('categories')
 
       if (savedNotes.length > 0) {
-        setNotes(savedNotes.map((note: Note) => ({
+        setNotes(savedNotes.map((note) => ({
           ...note,
           createdAt: new Date(note.createdAt),
           updatedAt: new Date(note.updatedAt)
-        })))
+        })) as Note[])
       } else {
         // If no saved notes, create welcome notes
         const welcomeNotes: Note[] = [
@@ -211,7 +211,7 @@ export default function NotelyticsNoteDashboard() {
       }
 
       if (savedCategories.length > 0) {
-        setCategories(savedCategories)
+        setCategories(savedCategories as Category[])
       } else {
         initialCategories.forEach(category => saveToIndexedDB('categories', category))
       }
@@ -359,7 +359,6 @@ export default function NotelyticsNoteDashboard() {
       toast.success('Note added successfully! 🎉')
     } else {
       toast.error('Please fill in all required fields 🙏')
-    
     }
   }, [newNote, categories])
 
@@ -367,9 +366,11 @@ export default function NotelyticsNoteDashboard() {
     if (editingNote) {
       const updatedNote = { ...editingNote, updatedAt: new Date() }
       await saveToIndexedDB('notes', updatedNote)
-      setNotes(prevNotes => prevNotes.map(note => 
-        note.id === editingNote.id ? updatedNote : note
-      ))
+      setNotes(prevNotes => 
+        prevNotes.map(note => 
+          note.id === editingNote.id ? updatedNote : note
+        )
+      )
       setEditingNote(null)
       toast.success('Note updated successfully! 📝')
     }
@@ -498,13 +499,14 @@ export default function NotelyticsNoteDashboard() {
               ...note,
               createdAt: new Date(note.createdAt),
               updatedAt: new Date(note.updatedAt)
-            })))
-            setCategories(updatedCategories)
+            })) as Note[])
+            setCategories(updatedCategories as Category[])
             toast.success('Notes and categories imported successfully! 📥')
           } else {
             throw new Error('Invalid import format')
           }
         } catch (error) {
+          console.error('Import error:', error)
           toast.error('Failed to import data. Please check the file format. 😕')
         }
       }
@@ -698,8 +700,7 @@ export default function NotelyticsNoteDashboard() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={(e) =>
-                              {
+                              onClick={(e) => {
                                 e.stopPropagation()
                                 setEditingNote(note)
                               }}
@@ -884,7 +885,7 @@ export default function NotelyticsNoteDashboard() {
             </Select>
             <div className="mt-4 flex items-center gap-4">
               <Label htmlFor="new-image-upload" className="cursor-pointer">
-                <ImageIcon className="h-6 w-4 mr-2 inline-block" />
+                <Upload className="h-6 w-4 mr-2 inline-block" />
                 Upload Image
               </Label>
               <Input
@@ -973,7 +974,7 @@ export default function NotelyticsNoteDashboard() {
                 </Select>
                 <div className="mt-4 flex items-center gap-4">
                   <Label htmlFor="image-upload" className="cursor-pointer">
-                    <ImageIcon className="h-6 w-6 mr-2 inline-block" />
+                    <Upload className="h-6 w-6 mr-2 inline-block" />
                     Upload Image
                   </Label>
                   <Input
@@ -1243,7 +1244,7 @@ export default function NotelyticsNoteDashboard() {
               <p>You may not use Notelytic for any illegal or unauthorized purpose.</p>
 
               <h2 className="text-xl font-bold">6. Disclaimer</h2>
-              <p>Notelytic is provided on an "as is" and "as available" basis. The author makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties, including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
+              <p>Notelytic is provided on an &quot;as is&quot; and &quot;as available&quot; basis. The author makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties, including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
 
               <h2 className="text-xl font-bold">7. Changes to Terms</h2>
               <p>The author reserves the right, at his sole discretion, to modify or replace these Terms at any time. It is your responsibility to check these Terms periodically for changes.</p>
