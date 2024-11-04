@@ -176,7 +176,7 @@ export default function NotelyticsNoteDashboard() {
           {
             id: '1',
             title: 'Welcome to Notelytic 📝',
-            content: 'This is your new note-taking dashboard! 🎉',
+            content: 'This is your new note-taking dashboard, made for you by Sunny Patel! 🎉',
             category: 'Personal 🏠',
             color: '#33FF57',
             createdAt: new Date(),
@@ -188,7 +188,7 @@ export default function NotelyticsNoteDashboard() {
           {
             id: '2',
             title: 'Getting Started 🚀',
-            content: 'Click the + button to add a new note.',
+            content: 'Click the + button in the bottom right to add a new note',
             category: 'To-Do ✅',
             color: '#FF33F5',
             createdAt: new Date(),
