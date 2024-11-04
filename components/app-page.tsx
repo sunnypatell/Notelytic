@@ -218,13 +218,6 @@ export default function NotelyticsNoteDashboard() {
     }
 
     initializeData()
-
-    // Update current time every second
-    const timer = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-
-    return () => clearInterval(timer)
   }, [])
 
   useEffect(() => {
@@ -244,13 +237,19 @@ export default function NotelyticsNoteDashboard() {
       .ql-toolbar.ql-snow {
         border-color: #4a5568;
         background-color: #2d3748;
+        z-index: 30;
+        position: relative;
       }
       .ql-container.ql-snow {
         border-color: #4a5568;
+        height: 200px;
+        margin-bottom: 1rem;
       }
       .ql-editor {
         background-color: #1a202c;
         color: #e2e8f0;
+        min-height: 200px;
+        font-size: 1rem;
       }
       .ql-formats button {
         color: #e2e8f0 !important;
@@ -278,11 +277,27 @@ export default function NotelyticsNoteDashboard() {
       }
       .ql-picker-options {
         background-color: #2d3748 !important;
+        z-index: 31 !important;
       }
       .ql-picker-item {
         color: #e2e8f0 !important;
       }
       .ql-picker-item:hover {
+        color: #90cdf4 !important;
+      }
+      .ql-tooltip {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+        border-color: #4a5568 !important;
+        z-index: 31 !important;
+      }
+      .ql-tooltip input[type="text"] {
+        background-color: #1a202c !important;
+        color: #e2e8f0 !important;
+        border-color: #4a5568 !important;
+      }
+      .ql-tooltip a.ql-action,
+      .ql-tooltip a.ql-remove {
         color: #90cdf4 !important;
       }
     `
@@ -291,6 +306,17 @@ export default function NotelyticsNoteDashboard() {
     return () => {
       document.head.removeChild(style)
     }
+  }, [])
+
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(new Date())
+    }
+    
+    updateTime() // Initial update
+    const timer = setInterval(updateTime, 1000)
+    
+    return () => clearInterval(timer)
   }, [])
 
   const filteredNotes = useMemo(() => {
@@ -333,6 +359,7 @@ export default function NotelyticsNoteDashboard() {
       toast.success('Note added successfully! 🎉')
     } else {
       toast.error('Please fill in all required fields 🙏')
+    
     }
   }, [newNote, categories])
 
@@ -541,7 +568,13 @@ export default function NotelyticsNoteDashboard() {
             <CardContent className="flex items-center justify-center p-6">
               <div className="text-center">
                 <Calendar className="h-8 w-8 mb-2 mx-auto text-green-500" />
-                <h2 className="text-2xl font-bold">{currentTime.toLocaleDateString()}</h2>
+                <h2 className="text-2xl font-bold">
+                  {currentTime.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                  })}
+                </h2>
                 <p className="text-sm text-gray-400">Current Date 📅</p>
               </div>
             </CardContent>
@@ -550,7 +583,14 @@ export default function NotelyticsNoteDashboard() {
             <CardContent className="flex items-center justify-center p-6">
               <div className="text-center">
                 <Clock className="h-8 w-8 mb-2 mx-auto text-yellow-500" />
-                <h2 className="text-2xl font-bold">{currentTime.toLocaleTimeString()}</h2>
+                <h2 className="text-2xl font-bold">
+                  {currentTime.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                  })}
+                </h2>
                 <p className="text-sm text-gray-400">Current Time ⏰</p>
               </div>
             </CardContent>
@@ -658,7 +698,8 @@ export default function NotelyticsNoteDashboard() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={(e) => {
+                              onClick={(e) =>
+                              {
                                 e.stopPropagation()
                                 setEditingNote(note)
                               }}
